@@ -92,8 +92,16 @@ predictions = model.transform(test_data)
 
 # Convert numeric predictions back to original category names
 # Retrieve label mapping from the StringIndexer model
-label_indexer_model = [stage for stage in model.stages if isinstance(stage, StringIndexer)][-1]
-labels = label_indexer_model.labels   # Note: 'labels', not 'labelsArray'
+
+# Find the StringIndexerModel that outputs the 'label' column
+label_indexer_model = [stage for stage in model.stages 
+                       if hasattr(stage, 'getOutputCol') and stage.getOutputCol() == 'label']
+if not label_indexer_model:
+    raise RuntimeError("Label indexer model not found in pipeline stages.")
+label_indexer_model = label_indexer_model[0]
+
+# Retrieve the mapping from numeric label to original category
+labels = label_indexer_model.labels
 
 # Build when-otherwise expression for predicted category
 pred_category_col = when(col("prediction") == 0.0, labels[0])
