@@ -4,6 +4,9 @@ from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml import Pipeline
 from pyspark.sql.functions import col, when
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 # 1. Initialize SparkSession (HDP 2.6.5 configuration)
 spark = SparkSession.builder \
