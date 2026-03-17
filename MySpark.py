@@ -5,10 +5,11 @@ from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml import Pipeline
 from pyspark.sql.functions import col, when
 import sys
+
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-# 1. Initialize SparkSession (HDP 2.6.5 configuration)
+# 1. Initialize SparkSession with Hive support
 spark = SparkSession.builder \
     .appName("IUCN_Conservation_Prediction") \
     .master("yarn") \
@@ -20,14 +21,9 @@ spark = SparkSession.builder \
 spark.sparkContext.setLogLevel("WARN")
 print("Spark version: {}".format(spark.version))
 
-# 2. Load data from HDFS CSV
-file_path = "hdfs:///user/maria_dev/sga6/threatened-species.csv"
-print("Loading data from {}...".format(file_path))
-
-df = spark.read \
-    .option("header", "true") \
-    .option("inferSchema", "true") \
-    .csv(file_path)
+# 2. Load data from Hive table (database: species, table: threatened_species)
+print("Loading data from Hive table species.threatened_species...")
+df = spark.table("species.threatened_species")
 
 # Inspect data
 print("Schema:")
@@ -91,8 +87,6 @@ model = pipeline.fit(train_data)
 predictions = model.transform(test_data)
 
 # Convert numeric predictions back to original category names
-# Retrieve label mapping from the StringIndexer model
-
 # Find the StringIndexerModel that outputs the 'label' column
 label_indexer_model = [stage for stage in model.stages 
                        if hasattr(stage, 'getOutputCol') and stage.getOutputCol() == 'label']
