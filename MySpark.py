@@ -11,7 +11,6 @@ spark = SparkSession.builder \
     .config("spark.sql.warehouse.dir", "file:///C:/tmp/warehouse") \
     .getOrCreate()
 
-# File path – adjust as necessary, avoid spaces if possible
 file_path = "hdfs:///user/maria_dev/sga6/threatened-species.csv"
 
 # Read CSV with robust options
