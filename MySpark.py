@@ -26,7 +26,6 @@ df = spark.read \
 # Check for corrupt records
 corrupt_count = df.filter(col("_corrupt_record").isNotNull()).count()
 if corrupt_count > 0:
-    # print(f"Warning: {corrupt_count} corrupt rows found. Check them with df.filter(col('_corrupt_record').isNotNull()).show()")
     print(f"Warning: {corrupt_count}")
     # Optionally drop them:
     # df = df.filter(col("_corrupt_record").isNull()).drop("_corrupt_record")
