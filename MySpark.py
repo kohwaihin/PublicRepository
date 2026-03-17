@@ -53,5 +53,5 @@ predictions = model.transform(test)
 accuracy = MulticlassClassificationEvaluator(labelCol="is_threatened", metricName="accuracy").evaluate(predictions)
 auc = BinaryClassificationEvaluator(labelCol="is_threatened", rawPredictionCol="rawPrediction").evaluate(predictions)
 
-print(f"Test Accuracy = {accuracy:.4f}")
-print(f"Test AUC = {auc:.4f}")
+print("Test Accuracy = {:.4f}".format(accuracy))
+print("Test AUC = {:.4f}".format(auc))
