@@ -12,7 +12,7 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # File path – adjust as necessary, avoid spaces if possible
-file_path = "C:/Users/kohwa/OneDrive/Desktop/Exam/Big Data Analytics/threatened-species.csv"
+file_path = "hdfs:///user/maria_dev/sga6/threatened-species.csv"
 
 # Read CSV with robust options
 df = spark.read \
