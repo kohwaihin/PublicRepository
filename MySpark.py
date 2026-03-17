@@ -5,23 +5,39 @@ from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator, BinaryClassificationEvaluator
 from pyspark.ml import Pipeline
 
-# Create Spark session with Hadoop configs for local mode
+# Create Spark session (no custom Hadoop config needed for local file)
 spark = SparkSession.builder \
     .appName("ThreatenedSpeciesML") \
-    .config("spark.hadoop.fs.defaultFS", "file:///") \
-    .config("spark.hadoop.hadoop.security.authentication", "simple") \
     .config("spark.sql.warehouse.dir", "file:///C:/tmp/warehouse") \
     .getOrCreate()
 
-# Read CSV using file:/// URI
-df = spark.read.option("header", "true").option("inferSchema", "true") \
-         .csv("file:///C:/Users/kohwa/OneDrive/Desktop/Exam/Big Data Analytics/threatened-species.csv")
+# File path – adjust as necessary, avoid spaces if possible
+file_path = "C:/Users/kohwa/OneDrive/Desktop/Exam/Big Data Analytics/threatened-species.csv"
 
-# Rest of your code (unchanged)...
+# Read CSV with robust options
+df = spark.read \
+    .option("header", "true") \
+    .option("inferSchema", "true") \
+    .option("quote", "\"") \
+    .option("escape", "\"") \
+    .option("mode", "PERMISSIVE") \
+    .option("columnNameOfCorruptRecord", "_corrupt_record") \
+    .csv(file_path)
+
+# Check for corrupt records
+corrupt_count = df.filter(col("_corrupt_record").isNotNull()).count()
+if corrupt_count > 0:
+    print(f"Warning: {corrupt_count} corrupt rows found. Check them with df.filter(col('_corrupt_record').isNotNull()).show()")
+    # Optionally drop them:
+    # df = df.filter(col("_corrupt_record").isNull()).drop("_corrupt_record")
+else:
+    df = df.drop("_corrupt_record")
+
+# Continue with your processing
 df = df.withColumn("is_threatened", when(col("category").isin("CR","EN","VU"), 1).otherwise(0))
 df = df.fillna({"population": "unknown"})
 
-categorical_cols = ["kingdom_name", "phylum_name", "class_name", "order_name", 
+categorical_cols = ["kingdom_name", "phylum_name", "class_name", "order_name",
                     "family_name", "genus_name", "population"]
 
 indexers = [StringIndexer(inputCol=col, outputCol=col+"_idx", handleInvalid="keep") for col in categorical_cols]
