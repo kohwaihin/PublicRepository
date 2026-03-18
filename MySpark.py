@@ -25,11 +25,9 @@ spark = SparkSession.builder \
 spark.sparkContext.setLogLevel("WARN")
 print("Spark version: {}".format(spark.version))
 
-# 2. Load data from Hive table
-print("Loading data from Hive table default.threatened_species...")
+# 2. Load data from Hive
 df = spark.table("default.threatened_species")
 
-# Select required columns
 df = df.select(
     "scientific_name",
     "kingdom_name", "phylum_name", "class_name",
@@ -37,53 +35,38 @@ df = df.select(
     "category"
 ).na.drop(subset=["category"])
 
-# Inspect data
-print("Schema:")
-df.printSchema()
-
-print("First 5 rows:")
-df.show(5, truncate=False)
-
-print("Distribution of target variable (category):")
-df.groupBy("category").count().orderBy("category").show()
-
-# 3. Data preprocessing
+# 3. Feature columns
 categorical_cols = [
     "kingdom_name", "phylum_name", "class_name",
     "order_name", "family_name", "genus_name"
 ]
 
-# StringIndexer for categorical columns
+# 4. Indexers
 indexers = [
     StringIndexer(inputCol=c, outputCol=c + "_idx", handleInvalid="keep")
     for c in categorical_cols
 ]
 
-# OneHotEncoder (Spark 2 compatible - single column each)
+# 5. OneHotEncoder (Spark 2 compatible)
 encoders = [
     OneHotEncoder(inputCol=c + "_idx", outputCol=c + "_vec")
     for c in categorical_cols
 ]
 
-# Label indexer
+# 6. Label indexer
 label_indexer = StringIndexer(
     inputCol="category",
     outputCol="label",
     handleInvalid="keep"
 )
 
-# Assemble features
+# 7. Assemble features
 assembler = VectorAssembler(
     inputCols=[c + "_vec" for c in categorical_cols],
     outputCol="features"
 )
 
-# 4. Train-test split
-train_data, test_data = df.randomSplit([0.8, 0.2], seed=42)
-print("Training records: {}".format(train_data.count()))
-print("Test records: {}".format(test_data.count()))
-
-# 5. Random Forest model
+# 8. Model
 rf = RandomForestClassifier(
     labelCol="label",
     featuresCol="features",
@@ -92,27 +75,26 @@ rf = RandomForestClassifier(
     seed=42
 )
 
-# 6. Pipeline
+# 9. Pipeline
 pipeline = Pipeline(
     stages=indexers + encoders + [label_indexer, assembler, rf]
 )
 
-# 7. Train model
-print("Training Random Forest model...")
+# 10. Train-test split
+train_data, test_data = df.randomSplit([0.8, 0.2], seed=42)
+
+# 11. Train model
+print("Training model...")
 model = pipeline.fit(train_data)
 
-# 8. Predictions
+# 12. Predictions
 predictions = model.transform(test_data)
 
-# 9. Convert prediction to category label
-label_model = None
-for stage in model.stages:
-    if hasattr(stage, "getOutputCol") and stage.getOutputCol() == "label":
-        label_model = stage
-        break
-
+# 13. FIXED: Get label indexer model (by position)
+label_model = model.stages[len(indexers) + len(encoders)]
 labels = label_model.labels
 
+# Map prediction index -> category label
 pred_col = when(col("prediction") == 0.0, labels[0])
 for i in range(1, len(labels)):
     pred_col = pred_col.when(col("prediction") == float(i), labels[i])
@@ -122,12 +104,12 @@ predictions = predictions.withColumn(
     pred_col.otherwise("UNKNOWN")
 )
 
-print("Sample predictions:")
+# 14. Show results
 predictions.select(
     "scientific_name", "category", "predicted_category"
 ).show(20, False)
 
-# 10. Evaluation
+# 15. Evaluation
 evaluator = MulticlassClassificationEvaluator(
     labelCol="label",
     predictionCol="prediction"
@@ -144,7 +126,7 @@ print("F1 Score: {:.4f}".format(f1))
 print("Precision: {:.4f}".format(precision))
 print("Recall: {:.4f}".format(recall))
 
-# 11. Feature importance
+# 16. Feature importance
 rf_model = model.stages[-1]
 importances = rf_model.featureImportances
 
@@ -155,7 +137,7 @@ for i in range(min(10, len(importances.indices))):
         importances.values[i]
     ))
 
-# 12. Save model
+# 17. Save model
 model.save("hdfs:///user/maria_dev/sga6/iucn_rf_model")
 print("\nModel saved to HDFS.")
 
