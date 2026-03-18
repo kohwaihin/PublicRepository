@@ -15,6 +15,7 @@ spark = SparkSession.builder \
     .appName("IUCN_Conservation_Prediction") \
     .master("yarn") \
     .config("spark.sql.catalogImplementation", "hive") \
+    .config("hive.metastore.uris", "thrift://sandbox-hdp.hortonworks.com:9083") \
     .enableHiveSupport() \
     .getOrCreate()
 
