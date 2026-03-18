@@ -23,7 +23,7 @@ spark.sparkContext.setLogLevel("WARN")
 print("Spark version: {}".format(spark.version))
 
 # 2. Load data from Hive
-df = spark.table("default.threatened_species")
+df = spark.table("species.threatened_species")
 
 df = df.select(
     "scientific_name",
