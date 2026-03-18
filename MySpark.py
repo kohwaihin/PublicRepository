@@ -3,6 +3,7 @@ from pyspark.ml.feature import StringIndexer, OneHotEncoderEstimator, VectorAsse
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml import Pipeline
+from pyspark.ml.feature import OneHotEncoder
 from pyspark.sql.functions import col, when
 import sys
 
@@ -46,7 +47,7 @@ indexers = [StringIndexer(inputCol=col, outputCol=col + "_idx",
                            handleInvalid="keep") for col in categorical_cols]
 
 # OneHotEncoder for indexed columns
-encoder = OneHotEncoderEstimator(
+encoder = OneHotEncoder(
     inputCols=[col + "_idx" for col in categorical_cols],
     outputCols=[col + "_vec" for col in categorical_cols]
 )
@@ -80,7 +81,7 @@ rf = RandomForestClassifier(
 # 6. Build pipeline
 #pipeline = Pipeline(stages=indexers + [encoder, assembler, label_indexer, rf])
 pipeline = Pipeline(
-    stages=indexers + encoder + [label_indexer, assembler, rf]
+    stages=indexers + [encoder, label_indexer, assembler, rf]
 )
 
 # 7. Train model
