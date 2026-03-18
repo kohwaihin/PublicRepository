@@ -70,8 +70,8 @@ print("Test records: {}".format(test_data.count()))
 rf = RandomForestClassifier(
     labelCol="label",
     featuresCol="features",
-    numTrees=100,
-    maxDepth=15,
+    numTrees=50,
+    maxDepth=10,
     impurity="gini",
     seed=42
 )
