@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import StringIndexer, OneHotEncoder, VectorAssembler
 from pyspark.ml.classification import RandomForestClassifier
@@ -8,7 +6,6 @@ from pyspark.ml import Pipeline
 from pyspark.sql.functions import col, when
 import sys
 
-# Python 2 compatibility
 if sys.version_info[0] < 3:
     reload(sys)
     sys.setdefaultencoding('utf-8')
@@ -18,7 +15,6 @@ spark = SparkSession.builder \
     .appName("IUCN_Conservation_Prediction") \
     .master("yarn") \
     .config("spark.sql.catalogImplementation", "hive") \
-    .config("hive.metastore.uris", "thrift://sandbox-hdp.hortonworks.com:9083") \
     .enableHiveSupport() \
     .getOrCreate()
 
