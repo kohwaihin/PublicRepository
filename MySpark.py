@@ -22,8 +22,8 @@ spark.sparkContext.setLogLevel("WARN")
 print("Spark version: {}".format(spark.version))
 
 # 2. Load data from Hive table (database: species, table: threatened_species)
-print("Loading data from Hive table species.threatened_species...")
-df = spark.table("species.threatened_species")
+print("Loading data from Hive table default.threatened_species...")
+df = spark.table("default.threatened_species")
 
 # Inspect data
 print("Schema:")
