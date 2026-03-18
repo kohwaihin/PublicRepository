@@ -3,12 +3,13 @@ from pyspark.ml.feature import StringIndexer, OneHotEncoderEstimator, VectorAsse
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml import Pipeline
-from pyspark.ml.feature import OneHotEncoder
 from pyspark.sql.functions import col, when
 import sys
 
-reload(sys)
-sys.setdefaultencoding('utf-8')
+# Only needed if you're on Python 2; remove if on Python 3
+if sys.version_info[0] < 3:
+    reload(sys)
+    sys.setdefaultencoding('utf-8')
 
 # 1. Initialize SparkSession with Hive support
 spark = SparkSession.builder \
@@ -22,9 +23,12 @@ spark = SparkSession.builder \
 spark.sparkContext.setLogLevel("WARN")
 print("Spark version: {}".format(spark.version))
 
-# 2. Load data from Hive table (database: species, table: threatened_species)
+# 2. Load data from Hive table
 print("Loading data from Hive table default.threatened_species...")
 df = spark.table("default.threatened_species")
+
+# OPTIONAL: For quick testing, limit rows (remove for full training)
+# df = df.limit(500)  # Uncomment if you want a smaller sample
 
 # Inspect data
 print("Schema:")
@@ -47,7 +51,8 @@ indexers = [StringIndexer(inputCol=col, outputCol=col + "_idx",
                            handleInvalid="keep") for col in categorical_cols]
 
 # OneHotEncoder for indexed columns
-encoder = OneHotEncoder(
+# Use OneHotEncoderEstimator (correct for Spark 2.3)
+encoder = OneHotEncoderEstimator(
     inputCols=[col + "_idx" for col in categorical_cols],
     outputCols=[col + "_vec" for col in categorical_cols]
 )
@@ -71,18 +76,14 @@ print("Test records: {}".format(test_data.count()))
 rf = RandomForestClassifier(
     labelCol="label",
     featuresCol="features",
-    numTrees=50,
-    maxDepth=5,
+    numTrees=50,          # Reduced for faster training; increase later
+    maxDepth=10,          # Adjust as needed
     impurity="gini",
     seed=42
 )
 
-
 # 6. Build pipeline
-#pipeline = Pipeline(stages=indexers + [encoder, assembler, label_indexer, rf])
-pipeline = Pipeline(
-    stages=indexers + [encoder, label_indexer, assembler, rf]
-)
+pipeline = Pipeline(stages=indexers + [encoder, assembler, label_indexer, rf])
 
 # 7. Train model
 print("Training Random Forest model...")
@@ -91,15 +92,26 @@ model = pipeline.fit(train_data)
 # 8. Make predictions
 predictions = model.transform(test_data)
 
-# Convert numeric predictions back to original category names
-# Find the StringIndexerModel that outputs the 'label' column
-label_indexer_model = [stage for stage in model.stages 
-                       if hasattr(stage, 'getOutputCol') and stage.getOutputCol() == 'label']
-if not label_indexer_model:
-    raise RuntimeError("Label indexer model not found in pipeline stages.")
-label_indexer_model = label_indexer_model[0]
+# 8a. Debug: Print fitted pipeline stages (optional, remove after verification)
+print("Fitted pipeline stages:")
+for i, stage in enumerate(model.stages):
+    print(f"Stage {i}: {stage.__class__.__name__}")
+    if hasattr(stage, 'getOutputCol'):
+        print(f"  outputCol = {stage.getOutputCol()}")
 
-# Retrieve the mapping from numeric label to original category
+# 8b. Convert numeric predictions back to original category names
+# Robust retrieval: look for stage with outputCol='label'
+label_indexer_model = None
+for stage in model.stages:
+    if hasattr(stage, 'getOutputCol') and stage.getOutputCol() == 'label':
+        label_indexer_model = stage
+        break
+
+# Fallback: if not found, assume it's the second-last stage (common in this pipeline)
+if label_indexer_model is None:
+    print("Warning: Using fallback (stage -2) to locate label indexer.")
+    label_indexer_model = model.stages[-2]
+
 labels = label_indexer_model.labels
 
 # Build when-otherwise expression for predicted category
