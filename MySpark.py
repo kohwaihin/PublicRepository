@@ -23,7 +23,7 @@ print("Spark version: {}".format(spark.version))
 
 # 2. Load data from Hive table (database: species, table: threatened_species)
 print("Loading data from Hive table default.threatened_species...")
-df = spark.table("default.threatened_species").limit(10000)
+df = spark.table("default.threatened_species")
 
 # Inspect data
 print("Schema:")
@@ -70,14 +70,18 @@ print("Test records: {}".format(test_data.count()))
 rf = RandomForestClassifier(
     labelCol="label",
     featuresCol="features",
-    numTrees=25,
-    maxDepth=10,
+    numTrees=50,
+    maxDepth=5,
     impurity="gini",
     seed=42
 )
 
+
 # 6. Build pipeline
-pipeline = Pipeline(stages=indexers + [encoder, assembler, label_indexer, rf])
+#pipeline = Pipeline(stages=indexers + [encoder, assembler, label_indexer, rf])
+pipeline = Pipeline(
+    stages=indexers + encoder + [label_indexer, assembler, rf]
+)
 
 # 7. Train model
 print("Training Random Forest model...")
